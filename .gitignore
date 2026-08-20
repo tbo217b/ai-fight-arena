@@ -45,3 +45,4 @@ training/train_ppo.py
 training/train_v2.py
 training/train_v21.py
 training/test_policy.py
+*.etli

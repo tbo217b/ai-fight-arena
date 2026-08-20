@@ -1,0 +1,26 @@
+AI Fight Arena - Isaac Sim PPO V2.3 Evaluation
+
+Fights:                 20
+Alpha wins:             20
+Bravo wins:             0
+Alpha win rate:         100.0%
+Average Alpha HP:       79.8
+Average Bravo HP:       0.0
+Average fight length:   15.0 decisions
+Alpha attacks:          100
+Alpha blocks:           60
+Alpha dodges:           20
+Bravo telegraphs:       100
+
+Transfer Comparison:
+PPO V2.2 Isaac Sim: 3/20 wins (15%)
+PPO V2.3 Isaac Sim: 20/20 wins (100%)
+
+V2.3 was developed after identifying a sim-to-sim transfer failure in
+V2.2. Training behavior was modified to better distinguish opponent
+telegraph and committed-attack phases. The resulting policy achieved
+100% defensive response during committed attacks in the training
+evaluation and a 100% win rate in this 20-fight Isaac Sim evaluation.
+
+Results apply to the current opponent and evaluation configuration and
+should not be interpreted as performance against arbitrary opponents.
