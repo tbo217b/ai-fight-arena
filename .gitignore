@@ -1,0 +1,47 @@
+# ROS / colcon
+build/
+install/
+log/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.pytest_cache/
+
+# Virtual environments
+venv/
+.env/
+.venv/
+training/venv/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Backups / development checkpoints
+*_backup.py
+*_backup.zip
+checkpoints/
+
+# Old experimental policies
+training/alpha_policy.zip
+training/alpha_policy_v1_backup.zip
+training/alpha_policy_v2.zip
+training/alpha_policy_v21.zip
+
+# Old experimental environments/evaluators
+training/fight_env.py
+training/fight_env_v1_backup.py
+training/fight_env_v2.py
+training/fight_env_v21.py
+training/evaluate_v2.py
+training/evaluate_v21.py
+training/train_ppo.py
+training/train_v2.py
+training/train_v21.py
+training/test_policy.py
