@@ -1,104 +1,89 @@
 # AI Fight Arena
 
-AI Fight Arena is a reinforcement-learning robotics project that combines **ROS 2, Gazebo, Gymnasium, and Stable-Baselines3 PPO** to train and deploy an autonomous simulated fighter.
+AI Fight Arena is a reinforcement-learning robotics project that trains and deploys an autonomous simulated fighter across **ROS 2, Gazebo, and NVIDIA Isaac Sim**.
 
-The project separates reinforcement-learning training from robotic deployment:
+The project demonstrates an end-to-end reinforcement-learning workflow:
 
-- Alpha is trained in a custom Gymnasium combat environment using PPO.
-- The trained neural-network policy is loaded into a ROS 2 controller.
-- Gazebo provides live physical position feedback.
-- ROS 2 bridges simulator state and robot movement commands.
-- Bravo operates as an autonomous rule-based opponent.
-- Alpha reacts to opponent state, including telegraphed attacks, using its learned policy.
+**ROS 2 / Gazebo prototype → PPO training → policy evaluation → NVIDIA Isaac Sim deployment → transfer analysis → policy adaptation**
 
-The result is a closed-loop system where a trained RL policy makes decisions from live simulator state rather than following a fixed movement script.
+The goal is to explore how an autonomous agent trained in one simulated environment behaves when transferred into a different simulator with different execution dynamics.
 
 ---
 
-## Demo Architecture
+## Project Highlights
+
+- Built a two-agent simulated combat environment using ROS 2 and Gazebo.
+- Developed a reinforcement-learning environment with six discrete actions.
+- Trained the Alpha fighter using Proximal Policy Optimization (PPO).
+- Implemented opponent attack telegraphing, blocking, dodging, stamina, health, and movement mechanics.
+- Deployed the trained PPO policy into NVIDIA Isaac Sim.
+- Evaluated sim-to-sim transfer performance.
+- Identified a major transfer-performance failure in PPO V2.2.
+- Adapted the training environment and produced PPO V2.3.
+- Improved Isaac Sim evaluation performance from **15% to 100% win rate** under the current evaluation configuration.
+
+---
+
+## System Architecture
 
 ```text
-                         +----------------------+
-                         |       Gazebo         |
-                         | Physics + Robot Pose |
-                         +----------+-----------+
-                                    |
-                              pose feedback
-                                    |
-                                    v
-                         +----------------------+
-                         |    ros_gz_bridge     |
-                         +----------+-----------+
-                                    |
-                                    v
-       +------------------ PPO Alpha Controller ------------------+
-       |                                                         |
-       | Observation                                             |
-       |  - health                                               |
-       |  - opponent health                                      |
-       |  - distance                                             |
-       |  - stamina                                              |
-       |  - cooldowns                                            |
-       |  - Bravo attack telegraph                               |
-       |  - previous actions                                     |
-       |                                                         |
-       +-------------------------+-------------------------------+
-                                 |
-                           PPO inference
-                                 |
-                                 v
-                 +-------------------------------+
-                 | WAIT / APPROACH / RETREAT     |
-                 | ATTACK / BLOCK / DODGE        |
-                 +---------------+---------------+
-                                 |
-                           ROS 2 commands
-                                 |
-                                 v
-                         +---------------+
-                         |    Gazebo     |
-                         | Robot Motion  |
-                         +---------------+
-
-Bravo AI ---- attack telegraph / attack events ----> Alpha
+                  AI Fight Arena
+                        |
+        +---------------+---------------+
+        |                               |
+     ROS 2 / Gazebo                 PPO Training
+        |                               |
+  Fighter simulation              Stable-Baselines3
+        |                               |
+        +---------------+---------------+
+                        |
+                 Trained Policy
+                        |
+                 NVIDIA Isaac Sim
+                        |
+                Transfer Evaluation
+                        |
+             V2.2: 15% win rate
+                        |
+                 Policy Adaptation
+                        |
+             V2.3: 100% win rate
 ```
 
 ---
 
-## What the Project Demonstrates
+## Reinforcement Learning
 
-- Reinforcement learning with **Proximal Policy Optimization (PPO)**
-- Custom **Gymnasium** environment design
-- Reward shaping and discrete-action RL
-- Stable-Baselines3 model training and evaluation
-- ROS 2 nodes, publishers, subscribers, and launch files
-- Gazebo physics simulation
-- `ros_gz_bridge` communication between ROS 2 and Gazebo
-- Closed-loop control from live simulator feedback
-- Autonomous multi-agent interaction
-- Learned defensive behavior
-- Health, stamina, attack range, cooldown, blocking, dodging, and KO systems
-- Deployment of a trained ML policy into a robotic simulation
+Alpha uses a PPO policy with an 11-dimensional observation space and six discrete actions:
+
+| Action | Behavior |
+|---|---|
+| WAIT | Hold position |
+| APPROACH | Move toward opponent |
+| RETREAT | Increase distance |
+| ATTACK | Perform an attack |
+| BLOCK | Reduce incoming damage |
+| DODGE | Evade an incoming attack |
+
+The environment includes:
+
+- Health
+- Stamina
+- Fighter distance
+- Attack range
+- Opponent attack telegraphs
+- Committed attack phases
+- Blocking
+- Dodging
+- Movement
+- Damage
+- Knockouts
 
 ---
 
 ## PPO V2.2
 
-The current policy is **Alpha PPO V2.2**.
-
-Training configuration:
-
-| Parameter | Value |
-|---|---:|
-| Algorithm | PPO |
-| Policy | MLP |
-| Training timesteps | 300,000 |
-| Learning rate | 3e-4 |
-| PPO rollout steps | 2,048 |
-| Batch size | 64 |
-| Gamma | 0.99 |
-| GAE lambda | 0.95 |
-| Entropy coefficient | 0.02 |
+The initial PPO V2.2 model was trained in the custom fight environment.
 
 The trained model is stored at:
 
@@ -106,140 +91,162 @@ The trained model is stored at:
 training/alpha_policy_v22.zip
 ```
 
-The training script is:
+When transferred into Isaac Sim, the policy loaded successfully with:
 
 ```text
-training/train_v22.py
+Observation space: (11,)
+Action space: Discrete(6)
 ```
 
----
+However, deployment exposed a significant **sim-to-sim transfer problem**.
 
-## V2.2 Observation Space
-
-Alpha receives an 11-value state vector:
-
-```text
-0   Alpha health
-1   Bravo health
-2   Distance between fighters
-3   Alpha stamina
-4   Bravo stamina
-5   Alpha attack cooldown
-6   Bravo attack cooldown
-7   Bravo attack telegraph
-8   Previous Alpha action
-9   Previous Bravo action
-10  Bravo aggression parameter
-```
-
-The attack telegraph is particularly important because it gives the policy information about an imminent opponent attack and allows PPO to learn a context-dependent defensive response.
-
----
-
-## Action Space
-
-Alpha has six discrete actions:
-
-```text
-0  WAIT
-1  APPROACH
-2  RETREAT
-3  ATTACK
-4  BLOCK
-5  DODGE
-```
-
-These actions are selected by the PPO model during inference.
-
----
-
-## Evaluation Results
-
-V2.2 was evaluated over **100 episodes** against the current rule-based Bravo opponent.
+### V2.2 Isaac Sim Evaluation
 
 | Metric | Result |
 |---|---:|
-| Fights | 100 |
-| Alpha wins | 100 |
-| Bravo wins | 0 |
-| Draws | 0 |
-| Alpha win rate | 100.0% |
-| Average Alpha HP remaining | 76.6 |
-| Average reward | 42.77 |
-| Average fight length | 19.5 steps |
-| Bravo attack telegraphs observed | 346 |
-| Defensive response rate | 100.0% |
+| Fights | 20 |
+| Alpha wins | 3 |
+| Bravo wins | 17 |
+| Alpha win rate | **15.0%** |
+| Average Alpha HP | 2.9 |
+| Average Bravo HP | 17.0 |
+| Average fight length | 45.6 decisions |
+| Alpha attacks | 83 |
+| Alpha blocks | 403 |
+| Alpha dodges | 0 |
 
-### Overall Alpha Action Usage
+Although Alpha recognized many attack situations, its behavior transferred poorly. It heavily favored blocking and frequently failed to finish Bravo when Bravo reached low health.
 
-| Action | Usage |
-|---|---:|
-| APPROACH | 51.03% |
-| ATTACK | 31.19% |
-| BLOCK | 17.78% |
-| WAIT | 0.00% |
-| RETREAT | 0.00% |
-| DODGE | 0.00% |
-
-### Response to Telegraphed Attacks
-
-During evaluation, Bravo telegraphed an attack **346 times**.
-
-Alpha responded with:
-
-```text
-BLOCK: 346 / 346
-```
-
-That means the learned policy did not simply block continuously. BLOCK represented only 17.78% of Alpha's overall actions, but it was selected for every observed attack telegraph during this evaluation.
-
-This demonstrates a **state-dependent learned defensive strategy**.
-
-> The 100% win rate applies to the current V2.2 evaluation environment and rule-based opponent. It should not be interpreted as performance against arbitrary or unseen opponents.
+This became the primary transfer problem addressed in V2.3.
 
 ---
 
-## Live Gazebo Deployment
+## PPO V2.3 Transfer Adaptation
 
-The trained V2.2 policy was subsequently integrated into the live ROS 2/Gazebo simulation.
+PPO V2.3 was developed after analyzing the V2.2 Isaac Sim failure.
 
-A representative fight demonstrated the following sequence:
+The training behavior was modified to better distinguish between:
 
-```text
-Alpha and Bravo physically approach each other
-                ↓
-Bravo enters attack range
-                ↓
-Bravo publishes an attack telegraph
-                ↓
-Alpha receives TEL=1
-                ↓
-PPO selects BLOCK
-                ↓
-Alpha activates its guard
-                ↓
-Bravo executes the attack
-                ↓
-Incoming damage is reduced
-                ↓
-Alpha returns to ATTACK
-                ↓
-Fight ends in a KO
-```
+1. **Opponent telegraph phase**
+2. **Opponent committed attack phase**
 
-In the live Gazebo test, an unblocked Bravo attack caused:
+This encouraged the policy to learn different offensive and defensive responses depending on the stage of Bravo's attack.
+
+The resulting policy is stored at:
 
 ```text
-15.0 damage
+training/alpha_policy_v23.zip
 ```
 
-A successfully blocked attack caused approximately:
+### V2.3 Training Evaluation
+
+V2.3 was evaluated across 200 fights:
+
+| Metric | Result |
+|---|---:|
+| Fights | 200 |
+| Alpha wins | 200 |
+| Bravo wins | 0 |
+| Alpha win rate | **100.0%** |
+| Average Alpha HP | 79.8 |
+| Average reward | 60.11 |
+| Average fight length | 15.6 decisions |
+
+The policy also demonstrated a **100% defensive response rate during committed Bravo attacks** in this evaluation.
+
+---
+
+## NVIDIA Isaac Sim Deployment
+
+The trained policy was then deployed into **NVIDIA Isaac Sim 6.0.1** on a cloud GPU environment.
+
+The Isaac Sim environment ran on an **NVIDIA L40S GPU**.
+
+The deployment includes:
+
+- Isaac Sim physics simulation
+- Alpha PPO policy inference
+- Rule-based Bravo opponent
+- Health and stamina systems
+- Attack telegraphing
+- Blocking
+- Dodging
+- Movement
+- Knockout detection
+- Automated multi-fight evaluation
+
+The main Isaac Sim demo is:
 
 ```text
-6.8 damage
+isaac/isaac_fight_arena_v23.py
 ```
 
-This verifies that the learned decision was connected to the live combat state rather than existing only inside the training environment.
+Evaluation scripts are located under:
+
+```text
+isaac/
+```
+
+---
+
+## V2.3 Isaac Sim Results
+
+The adapted PPO V2.3 policy was evaluated in 20 Isaac Sim fights.
+
+| Metric | Result |
+|---|---:|
+| Fights | 20 |
+| Alpha wins | 20 |
+| Bravo wins | 0 |
+| Alpha win rate | **100.0%** |
+| Average Alpha HP | 79.8 |
+| Average Bravo HP | 0.0 |
+| Average fight length | 15.0 decisions |
+| Alpha attacks | 100 |
+| Alpha blocks | 60 |
+| Alpha dodges | 20 |
+| Bravo telegraphs | 100 |
+
+The complete results are stored in:
+
+```text
+results/isaac_v23_results.txt
+```
+
+---
+
+## Transfer Improvement
+
+The most important result of the project was the improvement between V2.2 and V2.3 after deployment exposed a transfer failure.
+
+| Policy | Isaac Sim Wins | Win Rate |
+|---|---:|---:|
+| PPO V2.2 | 3 / 20 | **15%** |
+| PPO V2.3 | 20 / 20 | **100%** |
+
+This represents an **85 percentage-point improvement** under the same current opponent/evaluation configuration.
+
+The result demonstrates an iterative robotics/ML workflow:
+
+```text
+Train
+  ↓
+Deploy
+  ↓
+Measure transfer failure
+  ↓
+Analyze agent behavior
+  ↓
+Modify training environment
+  ↓
+Retrain / adapt
+  ↓
+Redeploy
+  ↓
+Re-evaluate
+```
+
+The 100% result applies specifically to the current Bravo opponent and evaluation configuration and should not be interpreted as performance against arbitrary opponents or environments.
 
 ---
 
@@ -247,231 +254,54 @@ This verifies that the learned decision was connected to the live combat state r
 
 ```text
 ai-fight-arena/
+├── isaac/
+│   ├── isaac_evaluate_v22.py
+│   ├── isaac_evaluate_v23.py
+│   ├── isaac_fight_arena.py
+│   └── isaac_fight_arena_v23.py
 │
-├── src/
-│   └── arena_control/
-│       │
-│       ├── arena_control/
-│       │   ├── fighter_alpha.py
-│       │   ├── fighter_bravo.py
-│       │   ├── bravo_ai.py
-│       │   ├── fight_controller.py
-│       │   └── __init__.py
-│       │
-│       ├── launch/
-│       │   └── fight_demo.launch.py
-│       │
-│       ├── package.xml
-│       ├── setup.py
-│       └── setup.cfg
+├── results/
+│   └── isaac_v23_results.txt
 │
 ├── training/
-│   ├── fight_env_v22.py
-│   ├── train_v22.py
+│   ├── alpha_policy_v22.zip
+│   ├── alpha_policy_v23.zip
 │   ├── evaluate_v22.py
+│   ├── evaluate_v23.py
+│   ├── fight_env_v22.py
+│   ├── fight_env_v23.py
 │   ├── rl_fighter_alpha.py
-│   └── alpha_policy_v22.zip
+│   ├── train_v22.py
+│   └── train_v23.py
 │
+├── src/
 ├── worlds/
-│   └── arena.sdf
-│
-├── .gitignore
 └── README.md
 ```
 
 ---
 
-## Training the Policy
-
-Create or activate a Python environment containing the required ML dependencies, including:
+## Technologies
 
 - Python
-- NumPy
-- Gymnasium
-- Stable-Baselines3
-- PyTorch
-
-Then:
-
-```bash
-cd training
-python train_v22.py
-```
-
-The trained model will be saved as:
-
-```text
-alpha_policy_v22.zip
-```
-
-Training is **not required** to run the already-saved V2.2 model.
-
----
-
-## Evaluating the Policy
-
-From the training directory:
-
-```bash
-python evaluate_v22.py
-```
-
-The evaluator measures:
-
-- win rate
-- remaining Alpha health
-- average episode reward
-- episode length
-- action distribution
-- opponent telegraph events
-- Alpha's response to telegraphed attacks
-- defensive response rate
-
----
-
-## Building the ROS 2 Workspace
-
-From the workspace root:
-
-```bash
-colcon build \
-  --base-paths src \
-  --symlink-install
-```
-
-Then source ROS 2 and the workspace:
-
-```bash
-source /opt/ros/lyrical/setup.bash
-source install/setup.bash
-```
-
----
-
-## Running the Gazebo Fight
-
-Launch the complete simulation with:
-
-```bash
-ros2 launch arena_control fight_demo.launch.py
-```
-
-The launch system starts:
-
-- Gazebo
-- Fighter Alpha's low-level controller
-- Fighter Bravo's low-level controller
-- ROS/Gazebo velocity bridges
-- Gazebo pose feedback bridge
-- Bravo's autonomous controller
-- Alpha's trained PPO controller
-
----
-
-## Technology Stack
-
-**Robotics / Simulation**
-
 - ROS 2
 - Gazebo
-- ros_gz_bridge
-
-**Machine Learning**
-
-- Python
-- Gymnasium
+- NVIDIA Isaac Sim
+- NVIDIA Isaac Lab
 - Stable-Baselines3
-- PPO
-- PyTorch
+- PPO reinforcement learning
+- Gymnasium
 - NumPy
-
-**Development Environment**
-
-- Ubuntu / WSL2
-- colcon
-- Git
-- GitHub
+- PyTorch
+- CUDA
+- Git / GitHub
 
 ---
 
-## Current Milestone
+## Key Takeaway
 
-The current version demonstrates an end-to-end RL workflow:
+AI Fight Arena is not only a reinforcement-learning training demonstration.
 
-```text
-custom environment
-        ↓
-PPO training
-        ↓
-policy evaluation
-        ↓
-saved neural-network policy
-        ↓
-ROS 2 integration
-        ↓
-Gazebo deployment
-        ↓
-live state feedback
-        ↓
-learned autonomous decisions
-```
+The project shows the complete process of taking a trained policy, deploying it into another robotics simulator, discovering that the original policy does not transfer successfully, measuring the failure, adapting the learning environment, and validating the improved policy through repeated simulation.
 
-The Gazebo/PPO V2.2 milestone is considered the first completed portfolio version of the project.
-
----
-
-## Planned Development
-
-### Multi-Agent Self-Play
-
-The next major RL extension is to replace the fixed rule-based opponent with a second learning policy.
-
-The intended system is:
-
-```text
-Alpha PPO
-    ↕
-competitive self-play
-    ↕
-Bravo PPO
-```
-
-Rather than permanently making one fighter stronger, Alpha and Bravo will learn against changing opponent policies. Either fighter may dominate for a period until the opposing policy adapts.
-
-Historical opponent policies may also be retained in a policy pool to reduce overfitting to only the newest opponent.
-
-### NVIDIA Isaac Sim
-
-The project is also planned for deployment in **NVIDIA Isaac Sim**.
-
-The goal is to reuse the existing ROS 2 / learned-policy architecture with a second robotics simulator and explore:
-
-- Isaac Sim robot control
-- ROS 2 integration
-- policy inference using Isaac simulation state
-- richer simulated sensors
-- potential depth-camera or LiDAR observations
-- comparison between Gazebo and Isaac Sim workflows
-
----
-
-## Project Status
-
-**PPO V2.2 training:** Complete  
-**100-episode evaluation:** Complete  
-**ROS 2 integration:** Complete  
-**Gazebo deployment:** Complete  
-**Closed-loop PPO control:** Complete  
-**Telegraph-aware blocking:** Complete  
-**GitHub portfolio release:** Complete  
-**Isaac Sim port:** Planned  
-**PPO vs. PPO self-play:** Planned
-
----
-
-## Author
-
-**Thomas Byrne**
-
-Computer Science / Cybersecurity background with interests in machine learning, autonomous systems, robotics simulation, AI engineering, and reinforcement learning.
-
+The transition from **15% V2.2 Isaac Sim win rate to 100% V2.3 win rate** is the project's primary sim-to-sim transfer result.
