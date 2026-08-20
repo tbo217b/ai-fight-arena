@@ -1,3 +1,5 @@
+import os
+
 from launch import LaunchDescription
 from launch.actions import ExecuteProcess, TimerAction
 from launch_ros.actions import Node
@@ -5,23 +7,38 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
 
-    # --------------------------------------------------
-    # Gazebo
-    # -r = start simulation running instead of paused
-    # --------------------------------------------------
+    workspace_root = os.path.expanduser('~/ai_fight_arena')
+
+    world_path = os.path.join(
+        workspace_root,
+        'worlds',
+        'arena.sdf'
+    )
+
+    python_path = os.path.join(
+        workspace_root,
+        'training',
+        'venv',
+        'bin',
+        'python'
+    )
+
+    alpha_script = os.path.join(
+        workspace_root,
+        'training',
+        'rl_fighter_alpha.py'
+    )
+
     gazebo = ExecuteProcess(
         cmd=[
             'gz',
             'sim',
             '-r',
-            '/home/thomas/ai_fight_arena/worlds/arena.sdf'
+            world_path
         ],
         output='screen'
     )
 
-    # --------------------------------------------------
-    # Low-level fighter controllers
-    # --------------------------------------------------
     fighter_alpha = Node(
         package='arena_control',
         executable='fighter_alpha',
@@ -36,9 +53,6 @@ def generate_launch_description():
         output='screen'
     )
 
-    # --------------------------------------------------
-    # ROS <-> Gazebo velocity bridge
-    # --------------------------------------------------
     velocity_bridge = Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',
@@ -49,9 +63,6 @@ def generate_launch_description():
         output='screen'
     )
 
-    # --------------------------------------------------
-    # Gazebo pose feedback -> ROS
-    # --------------------------------------------------
     pose_bridge = Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',
@@ -63,9 +74,6 @@ def generate_launch_description():
         output='screen'
     )
 
-    # --------------------------------------------------
-    # Rule-based Bravo AI
-    # --------------------------------------------------
     bravo_ai = Node(
         package='arena_control',
         executable='bravo_ai',
@@ -73,24 +81,17 @@ def generate_launch_description():
         output='screen'
     )
 
-    # --------------------------------------------------
-    # PPO Alpha
-    # Uses the separate RL virtual environment
-    # --------------------------------------------------
     alpha_ppo = ExecuteProcess(
         cmd=[
-            '/home/thomas/ai_fight_arena/training/venv/bin/python',
-            '/home/thomas/ai_fight_arena/training/rl_fighter_alpha.py'
+            python_path,
+            alpha_script
         ],
         output='screen'
     )
 
     return LaunchDescription([
-
-        # Start Gazebo immediately.
         gazebo,
 
-        # Give the fresh world 3 seconds to initialize.
         TimerAction(
             period=3.0,
             actions=[
@@ -101,8 +102,6 @@ def generate_launch_description():
             ]
         ),
 
-        # Give bridges / controllers another couple seconds
-        # before starting the actual AI fight.
         TimerAction(
             period=5.0,
             actions=[
