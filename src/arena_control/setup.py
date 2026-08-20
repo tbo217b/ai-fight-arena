@@ -19,10 +19,10 @@ setup(
     package_data={'': ['py.typed']},
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='thomas',
-    maintainer_email='thomas@todo.todo',
-    description='TODO: Package description',
-    license='TODO: License declaration',
+    maintainer='Thomas Byrne',
+    maintainer_email='tbyrne217@gmail.com',
+    description='ROS 2 control package for the AI Fight Arena reinforcement-learning simulation.',
+    license='MIT',
     extras_require={
         'test': [
             'pytest',
