@@ -10,6 +10,35 @@ The goal is to explore how an autonomous agent trained in one simulated environm
 
 ---
 
+
+## Isaac Sim Demo
+
+The trained PPO V2.3 policy was deployed and evaluated in **NVIDIA Isaac Sim 6.0.1** on an NVIDIA L40S GPU.
+
+### Arena
+
+![AI Fight Arena running in NVIDIA Isaac Sim](media/isaac_sim_screenshot.png)
+
+**Alpha (Blue):** PPO reinforcement-learning agent  
+**Bravo (Red):** Rule-based autonomous opponent
+
+### Video Demo
+
+[▶ Watch the Isaac Sim PPO V2.3 Fight Demo](media/isaac_sim_demo.mp4)
+
+The demo shows the PPO-controlled Alpha agent operating inside Isaac Sim against the autonomous Bravo opponent.
+
+### Transfer Result
+
+| Policy | Isaac Sim Record | Win Rate |
+|---|---:|---:|
+| PPO V2.2 | 3 / 20 | 15% |
+| PPO V2.3 | 20 / 20 | 100% |
+
+Deployment of V2.2 exposed a sim-to-sim transfer failure. After analyzing the failure and adapting the training environment to better match the Isaac Sim execution sequence, PPO V2.3 achieved a **20/20 win record** under the current evaluation configuration.
+
+---
+
 ## Project Highlights
 
 - Built a two-agent simulated combat environment using ROS 2 and Gazebo.
