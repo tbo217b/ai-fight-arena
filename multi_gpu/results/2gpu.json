@@ -1,0 +1,13 @@
+{
+  "world_size": 2,
+  "gpu_model": "NVIDIA L40S",
+  "epochs": 3,
+  "samples_per_epoch": 200000,
+  "global_batch_size": 1024,
+  "elapsed_seconds": 7.473572712999953,
+  "processed_samples": 600000,
+  "throughput_samples_per_second": 80282.88785580773,
+  "pytorch_version": "2.11.0+cu128",
+  "cuda_version": "12.8",
+  "backend": "NCCL"
+}

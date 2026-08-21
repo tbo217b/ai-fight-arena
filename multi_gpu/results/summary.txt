@@ -1,0 +1,29 @@
+AI Fight Arena - Multi-GPU Benchmark
+
+Hardware:
+2x NVIDIA L40S
+
+Software:
+PyTorch 2.11.0
+CUDA 12.8
+NCCL
+
+MULTI-GPU TRAINING - PyTorch DistributedDataParallel
+
+1 GPU throughput:       76,343 samples/sec
+2 GPU throughput:       80,283 samples/sec
+Speedup:                1.05x
+Scaling efficiency:     52.6%
+
+The DDP benchmark used one process per GPU, NCCL communication,
+DistributedSampler, and synchronized gradient updates.
+
+MULTI-GPU INFERENCE
+
+1 GPU throughput:       525,155 samples/sec
+2 GPU throughput:       1,023,350 samples/sec
+Speedup:                1.95x
+Scaling efficiency:     97.4%
+
+The inference benchmark distributed independent inference workloads
+across two NVIDIA L40S GPUs and measured aggregate throughput.
